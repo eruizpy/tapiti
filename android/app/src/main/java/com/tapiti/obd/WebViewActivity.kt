@@ -22,8 +22,6 @@ class WebViewActivity : AppCompatActivity() {
         private const val TAPITI_URL = "http://127.0.0.1:8080"
         private const val LAUNCH_DELAY_MS = 1500L
         private const val RETRY_DELAY_MS  = 2000L
-        // Cambiar por la MAC del Viecar V2.1 del vehículo
-        private const val VIECAR_ADDRESS  = "00:00:00:00:00:00"
     }
 
     private lateinit var webView: WebView
@@ -31,6 +29,14 @@ class WebViewActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Si no hay dispositivo guardado, ir al picker
+        val savedAddress = DevicePickerActivity.getSavedAddress(this)
+        if (savedAddress == null) {
+            startActivity(Intent(this, DevicePickerActivity::class.java))
+            finish()
+            return
+        }
 
         webView = WebView(this).apply {
             settings.apply {
@@ -58,13 +64,16 @@ class WebViewActivity : AppCompatActivity() {
             return
         }
 
-        val device: BluetoothDevice? = adapter.bondedDevices
-            .firstOrNull { it.address == VIECAR_ADDRESS }
-            ?: adapter.bondedDevices.firstOrNull { it.name?.contains("VIECAR", ignoreCase = true) == true }
-            ?: adapter.bondedDevices.firstOrNull { it.name?.contains("OBD", ignoreCase = true) == true }
+        val savedAddress = DevicePickerActivity.getSavedAddress(this)
+        val device: BluetoothDevice? = if (savedAddress != null) {
+            adapter.bondedDevices.firstOrNull { it.address == savedAddress }
+        } else {
+            adapter.bondedDevices.firstOrNull { it.name?.contains("VIECAR", ignoreCase = true) == true }
+                ?: adapter.bondedDevices.firstOrNull { it.name?.contains("OBD", ignoreCase = true) == true }
+        }
 
         if (device == null) {
-            Toast.makeText(this, "Viecar no emparejado — emparejar en Ajustes BT", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, "Dispositivo OBD no encontrado — seleccionar en ajustes", Toast.LENGTH_LONG).show()
             Log.w(TAG, "Dispositivo OBD no encontrado entre los emparejados")
             return
         }
