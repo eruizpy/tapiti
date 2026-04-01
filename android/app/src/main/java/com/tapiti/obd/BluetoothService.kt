@@ -33,7 +33,7 @@ class BluetoothService : Service() {
          * Actualizar con: sha256sum assets/tapiti | awk '{print $1}'
          * Dejar vacío durante desarrollo — se loggeará el hash real para rellenar.
          */
-        private const val EXPECTED_SHA256 = ""
+        private const val EXPECTED_SHA256 = "b23029f0337d79f52f4a040c7fa0aacee378c82ff0afe416fb5179aa5bbe5fbb"
     }
 
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
@@ -136,7 +136,7 @@ class BluetoothService : Service() {
             .start()
 
         rustProcess = process
-        Log.i(TAG, "Proceso Rust lanzado (pid=${process.pid()})")
+        Log.i(TAG, "Proceso Rust lanzado")
 
         // Redirigir stdout/stderr del proceso Rust a Logcat
         scope.launch(Dispatchers.IO) {
