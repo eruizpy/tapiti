@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>tapiti</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #0a0a0a;
+    color: #e0e0e0;
+    font-family: 'Courier New', monospace;
+    overflow: hidden;
+    width: 100vw;
+    height: 100vh;
+  }
+
+  #grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+    gap: 6px;
+    padding: 6px;
+    width: 100%;
+    height: 100%;
+  }
+
+  .gauge-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: #111;
+    border-radius: 8px;
+    border: 1px solid #222;
+    padding: 4px;
+    position: relative;
+  }
+
+  /* IAM ocupa 2 columnas — alerta visual crítica */
+  .gauge-cell.wide { grid-column: span 2; }
+
+  .gauge-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: #555;
+    margin-bottom: 2px;
+  }
+
+  .gauge-value {
+    font-size: 28px;
+    font-weight: bold;
+    line-height: 1;
+  }
+
+  .gauge-unit {
+    font-size: 10px;
+    color: #444;
+    margin-top: 2px;
+  }
+
+  svg.arc-gauge {
+    width: 100%;
+    max-width: 120px;
+    height: auto;
+  }
+
+  /* Colores por estado */
+  .color-normal  { color: #00e676; }   /* verde  */
+  .color-warn    { color: #ffeb3b; }   /* amarillo */
+  .color-danger  { color: #f44336; }   /* rojo */
+  .color-info    { color: #40c4ff; }   /* azul  */
+  .color-neutral { color: #e0e0e0; }
+
+  /* IAM — barra de estado */
+  #iam-bar-wrap {
+    width: 90%;
+    height: 8px;
+    background: #222;
+    border-radius: 4px;
+    margin-top: 6px;
+    overflow: hidden;
+  }
+  #iam-bar {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.4s, background 0.4s;
+    background: #00e676;
+  }
+
+  /* Knock — indicador de ángulo */
+  .knock-indicator {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    margin-left: 4px;
+    display: inline-block;
+  }
+
+  #status-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: #050505;
+    border-top: 1px solid #1a1a1a;
+    padding: 3px 8px;
+    font-size: 9px;
+    color: #333;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  #ws-dot {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #f44336;
+    margin-right: 4px;
+    vertical-align: middle;
+  }
+  #ws-dot.connected { background: #00e676; }
+</style>
+</head>
+<body>
+
+<div id="grid">
+
+  <!-- RPM -->
+  <div class="gauge-cell" id="cell-rpm">
+    <div class="gauge-label">RPM</div>
+    <svg class="arc-gauge" viewBox="0 0 120 70">
+      <path d="M10,65 A55,55 0 0,1 110,65" fill="none" stroke="#222" stroke-width="10" stroke-linecap="round"/>
+      <path id="arc-rpm" d="M10,65 A55,55 0 0,1 110,65" fill="none" stroke="#00e676" stroke-width="10"
+            stroke-linecap="round" stroke-dasharray="0 173" style="transition:stroke-dasharray .15s"/>
+      <text x="60" y="58" text-anchor="middle" fill="#e0e0e0" font-size="22" font-family="Courier New" id="val-rpm">—</text>
+    </svg>
+    <div class="gauge-unit">rpm</div>
+  </div>
+
+  <!-- BOOST -->
+  <div class="gauge-cell" id="cell-boost">
+    <div class="gauge-label">BOOST</div>
+    <svg class="arc-gauge" viewBox="0 0 120 70">
+      <path d="M10,65 A55,55 0 0,1 110,65" fill="none" stroke="#222" stroke-width="10" stroke-linecap="round"/>
+      <path id="arc-boost" d="M10,65 A55,55 0 0,1 110,65" fill="none" stroke="#40c4ff" stroke-width="10"
+            stroke-linecap="round" stroke-dasharray="0 173" style="transition:stroke-dasharray .15s"/>
+      <text x="60" y="58" text-anchor="middle" fill="#e0e0e0" font-size="22" font-family="Courier New" id="val-boost">—</text>
+    </svg>
+    <div class="gauge-unit">psi</div>
+  </div>
+
+  <!-- TPS -->
+  <div class="gauge-cell" id="cell-tps">
+    <div class="gauge-label">TPS</div>
+    <svg class="arc-gauge" viewBox="0 0 120 70">
+      <path d="M10,65 A55,55 0 0,1 110,65" fill="none" stroke="#222" stroke-width="10" stroke-linecap="round"/>
+      <path id="arc-tps" d="M10,65 A55,55 0 0,1 110,65" fill="none" stroke="#ff9800" stroke-width="10"
+            stroke-linecap="round" stroke-dasharray="0 173" style="transition:stroke-dasharray .1s"/>
+      <text x="60" y="58" text-anchor="middle" fill="#e0e0e0" font-size="22" font-family="Courier New" id="val-tps">—</text>
+    </svg>
+    <div class="gauge-unit">%</div>
+  </div>
+
+  <!-- MAF -->
+  <div class="gauge-cell" id="cell-maf">
+    <div class="gauge-label">MAF</div>
+    <svg class="arc-gauge" viewBox="0 0 120 70">
+      <path d="M10,65 A55,55 0 0,1 110,65" fill="none" stroke="#222" stroke-width="10" stroke-linecap="round"/>
+      <path id="arc-maf" d="M10,65 A55,55 0 0,1 110,65" fill="none" stroke="#ce93d8" stroke-width="10"
+            stroke-linecap="round" stroke-dasharray="0 173" style="transition:stroke-dasharray .15s"/>
+      <text x="60" y="58" text-anchor="middle" fill="#e0e0e0" font-size="22" font-family="Courier New" id="val-maf">—</text>
+    </svg>
+    <div class="gauge-unit">g/s</div>
+  </div>
+
+  <!-- COOLANT -->
+  <div class="gauge-cell" id="cell-coolant">
+    <div class="gauge-label">COOLANT</div>
+    <div class="gauge-value color-info" id="val-coolant">—</div>
+    <div class="gauge-unit">°C</div>
+  </div>
+
+  <!-- IAT -->
+  <div class="gauge-cell" id="cell-iat">
+    <div class="gauge-label">IAT</div>
+    <div class="gauge-value color-info" id="val-iat">—</div>
+    <div class="gauge-unit">°C</div>
+  </div>
+
+  <!-- TIMING -->
+  <div class="gauge-cell" id="cell-timing">
+    <div class="gauge-label">TIMING</div>
+    <div class="gauge-value color-neutral" id="val-timing">—</div>
+    <div class="gauge-unit">°</div>
+  </div>
+
+  <!-- LOAD -->
+  <div class="gauge-cell" id="cell-load">
+    <div class="gauge-label">LOAD</div>
+    <div class="gauge-value color-neutral" id="val-load">—</div>
+    <div class="gauge-unit">%</div>
+  </div>
+
+  <!-- KNOCK FINE -->
+  <div class="gauge-cell" id="cell-knock_fine">
+    <div class="gauge-label">KNOCK F</div>
+    <div class="gauge-value color-normal" id="val-knock_fine">—</div>
+    <div class="gauge-unit">°</div>
+  </div>
+
+  <!-- KNOCK LEARN -->
+  <div class="gauge-cell" id="cell-knock_learn">
+    <div class="gauge-label">KNOCK L</div>
+    <div class="gauge-value color-normal" id="val-knock_learn">—</div>
+    <div class="gauge-unit">°</div>
+  </div>
+
+  <!-- FUEL PRESSURE -->
+  <div class="gauge-cell" id="cell-fuel_pres">
+    <div class="gauge-label">FUEL P</div>
+    <div class="gauge-value color-neutral" id="val-fuel_pres">—</div>
+    <div class="gauge-unit">kPa</div>
+  </div>
+
+  <!-- IAM — barra de salud del sistema de knock -->
+  <div class="gauge-cell wide" id="cell-iam">
+    <div class="gauge-label">IAM — Ignition Advance Multiplier</div>
+    <div class="gauge-value color-normal" id="val-iam" style="font-size:36px">—</div>
+    <div id="iam-bar-wrap"><div id="iam-bar" style="width:0%"></div></div>
+    <div id="iam-status" style="font-size:9px;color:#555;margin-top:4px">—</div>
+  </div>
+
+</div>
+
+<div id="status-bar">
+  <span><span id="ws-dot"></span><span id="ws-status">desconectado</span></span>
+  <span id="last-ts">—</span>
+  <span>tapiti v0.1.0 · EJ205</span>
+</div>
+
+<script>
+'use strict';
+
+/* ── Configuración de escalas ── */
+const SCALES = {
+  rpm:        { min: 0,    max: 8000,  warn: 6500, danger: 7200 },
+  boost:      { min: -2,   max: 20,    warn: 15,   danger: 18   },
+  tps:        { min: 0,    max: 100,   warn: 95,   danger: 100  },
+  maf:        { min: 0,    max: 400,   warn: 350,  danger: 390  },
+  coolant:    { min: 60,   max: 120,   warn: 100,  danger: 110  },
+  iat:        { min: 10,   max: 70,    warn: 55,   danger: 65   },
+  timing:     { min: -10,  max: 45,    warn: null, danger: null },
+  load:       { min: 0,    max: 100,   warn: null, danger: null },
+  knock_fine: { min: -10,  max: 5,     warn: -3,   danger: -6   },
+  knock_learn:{ min: -15,  max: 5,     warn: -5,   danger: -10  },
+  fuel_pres:  { min: 200,  max: 420,   warn: 380,  danger: 410  },
+};
+
+const ARC_LEN = 173; // longitud total del arco SVG en px (radio 55, ~180°)
+
+/* ── Helpers ── */
+function clamp(v, min, max) { return Math.min(Math.max(v, min), max); }
+
+function colorClass(pid, value) {
+  const s = SCALES[pid];
+  if (!s || s.danger === null) return 'color-neutral';
+  if (Math.abs(value) >= Math.abs(s.danger)) return 'color-danger';
+  if (Math.abs(value) >= Math.abs(s.warn))   return 'color-warn';
+  return 'color-normal';
+}
+
+function updateArc(pid, value) {
+  const arc = document.getElementById('arc-' + pid);
+  if (!arc) return;
+  const s = SCALES[pid];
+  const ratio = clamp((value - s.min) / (s.max - s.min), 0, 1);
+  const filled = ratio * ARC_LEN;
+  arc.setAttribute('stroke-dasharray', filled + ' ' + (ARC_LEN - filled));
+  // Color del arco
+  const cls = colorClass(pid, value);
+  arc.setAttribute('stroke',
+    cls === 'color-danger' ? '#f44336' :
+    cls === 'color-warn'   ? '#ffeb3b' :
+    arc.getAttribute('stroke'));   // mantiene el color original por PID
+}
+
+function updateText(pid, value, decimals) {
+  const el = document.getElementById('val-' + pid);
+  if (!el) return;
+  const formatted = Number.isFinite(value) ? value.toFixed(decimals) : '—';
+  el.textContent = formatted;
+  // Limpiar clases de color
+  el.className = el.className.replace(/color-\w+/g, '').trim();
+  el.classList.add(colorClass(pid, value));
+}
+
+function updateIam(value) {
+  const el    = document.getElementById('val-iam');
+  const bar   = document.getElementById('iam-bar');
+  const label = document.getElementById('iam-status');
+  if (!el || !bar || !label) return;
+
+  el.textContent = value.toFixed(3);
+  const pct = clamp(value / 1.0 * 100, 0, 100);
+  bar.style.width = pct + '%';
+
+  let status, color;
+  if (value >= 0.875) {
+    status = 'OK — sistema de knock normal';
+    color  = '#00e676';
+  } else if (value >= 0.75) {
+    status = '⚠ REVISAR — knock activo';
+    color  = '#ffeb3b';
+  } else {
+    status = '⛔ DETENER SESIÓN — knock severo';
+    color  = '#f44336';
+  }
+  bar.style.background = color;
+  el.style.color       = color;
+  label.textContent    = status;
+  label.style.color    = color;
+}
+
+/* ── Dispatcher de lecturas entrantes ── */
+function onReading(r) {
+  const pid   = r.pid;
+  const value = r.value;
+
+  switch (pid) {
+    case 'rpm':
+      updateArc('rpm', value);
+      updateText('rpm', value, 0);
+      break;
+    case 'boost_psi':
+      updateArc('boost', value);
+      updateText('boost', value, 1);
+      break;
+    case 'tps':
+      updateArc('tps', value);
+      updateText('tps', value, 1);
+      break;
+    case 'maf':
+      updateArc('maf', value);
+      updateText('maf', value, 1);
+      break;
+    case 'coolant':
+      updateText('coolant', value, 0);
+      break;
+    case 'iat':
+      updateText('iat', value, 0);
+      break;
+    case 'timing':
+      updateText('timing', value, 1);
+      break;
+    case 'load':
+      updateText('load', value, 1);
+      break;
+    case 'knock_fine':
+      updateText('knock_fine', value, 2);
+      break;
+    case 'knock_learn':
+      updateText('knock_learn', value, 2);
+      break;
+    case 'fuel_pres':
+      updateText('fuel_pres', value, 0);
+      break;
+    case 'iam':
+      updateIam(value);
+      break;
+    default:
+      break;
+  }
+
+  // Timestamp de última lectura
+  const ts = new Date(r.ts_ms);
+  document.getElementById('last-ts').textContent =
+    ts.toTimeString().slice(0, 8);
+}
+
+/* ── WebSocket ── */
+const WS_URL = 'ws://127.0.0.1:8080';
+let ws = null;
+let reconnectTimer = null;
+
+function connect() {
+  const dot    = document.getElementById('ws-dot');
+  const status = document.getElementById('ws-status');
+
+  ws = new WebSocket(WS_URL);
+
+  ws.onopen = function () {
+    dot.classList.add('connected');
+    status.textContent = 'conectado';
+    if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
+  };
+
+  ws.onmessage = function (event) {
+    try {
+      const reading = JSON.parse(event.data);
+      onReading(reading);
+    } catch (e) {
+      // frame malformado — ignorar
+    }
+  };
+
+  ws.onclose = function () {
+    dot.classList.remove('connected');
+    status.textContent = 'reconectando…';
+    reconnectTimer = setTimeout(connect, 2000);
+  };
+
+  ws.onerror = function () {
+    ws.close();
+  };
+}
+
+// Esperar a que el servidor Rust levante antes del primer intento
+setTimeout(connect, 500);
+</script>
+</body>
+</html>
