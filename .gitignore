@@ -1,0 +1,23 @@
+# Rust
+/target/
+Cargo.lock.bak
+
+# Android build
+android/.gradle/
+android/app/build/
+android/app/src/main/assets/tapiti
+*.apk
+*.aab
+local.properties
+
+# IDE
+.vscode/
+.idea/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Documentos de sesión — no subir al repo
+init_doc/
