@@ -1,0 +1,9 @@
+pub const AT_RESET: &str = "ATZ";
+pub const AT_ECHO_OFF: &str = "ATE0";
+pub const AT_HEADERS_OFF: &str = "ATH0";
+pub const AT_SPACES_OFF: &str = "ATS0";
+pub const AT_ADAPTIVE_TIM: &str = "ATAT1";
+pub const AT_AUTO_PROTO: &str = "ATSP0";
+pub const AT_SHOW_PROTO: &str = "ATDP";
+pub const AT_VOLTAGE: &str = "ATRV";
+pub const AT_SUBARU_HDR: &str = "AT SH 7E0";
