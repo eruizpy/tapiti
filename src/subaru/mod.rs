@@ -130,3 +130,50 @@ pub fn make_reading(pid: &PidDef, value: f64) -> Reading {
         ts_ms: now_ms(),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_ej205_pids_contains_expected_core_commands() {
+        let pids = ej205_pids();
+        assert!(!pids.is_empty());
+
+        let rpm = pids.iter().find(|p| p.name == "rpm").expect("rpm exists");
+        assert_eq!(rpm.cmd, "010C");
+        assert_eq!(rpm.unit, "rpm");
+        assert_eq!(rpm.priority, Priority::Critical);
+
+        let iam = pids.iter().find(|p| p.name == "iam").expect("iam exists");
+        assert_eq!(iam.cmd, "2101");
+        assert_eq!(iam.priority, Priority::Low);
+    }
+
+    #[test]
+    fn test_make_reading_maps_pid_metadata() {
+        let pid = PidDef {
+            name: "test_pid",
+            cmd: "0100",
+            unit: "u",
+            priority: Priority::Normal,
+            decode: mode01::map_kpa,
+        };
+        let before = now_ms();
+        let reading = make_reading(&pid, 12.34);
+        let after = now_ms();
+
+        assert_eq!(reading.pid, "test_pid");
+        assert_eq!(reading.unit, "u");
+        assert_eq!(reading.value, 12.34);
+        assert!(reading.ts_ms >= before);
+        assert!(reading.ts_ms <= after);
+    }
+
+    #[test]
+    fn test_now_ms_is_monotonic_enough_for_runtime_usage() {
+        let a = now_ms();
+        let b = now_ms();
+        assert!(b >= a);
+    }
+}

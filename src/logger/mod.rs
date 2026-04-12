@@ -67,3 +67,67 @@ impl SqliteStore {
         Ok(session)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::obd::Reading;
+
+    fn temp_db_path(name: &str) -> String {
+        let ts = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_nanos();
+        let pid = std::process::id();
+        std::env::temp_dir()
+            .join(format!("tapiti_{}_{}_{}.db", name, pid, ts))
+            .to_string_lossy()
+            .into_owned()
+    }
+
+    #[tokio::test]
+    async fn test_insert_latest_session_and_export_csv() {
+        let path = temp_db_path("logger_roundtrip");
+        let store = SqliteStore::new(&path).await.expect("db open");
+
+        let r1 = Reading {
+            pid: "rpm",
+            value: 1234.0,
+            unit: "rpm",
+            ts_ms: 1000,
+        };
+        let r2 = Reading {
+            pid: "tps",
+            value: 42.5,
+            unit: "%",
+            ts_ms: 1100,
+        };
+
+        store.insert(&r1).await.expect("insert r1");
+        store.insert(&r2).await.expect("insert r2");
+
+        let session = store
+            .latest_session()
+            .await
+            .expect("latest_session ok")
+            .expect("session exists");
+        let csv = store.export_csv(&session).await.expect("export_csv ok");
+
+        assert!(csv.starts_with("ts_ms,pid,value,unit\n"));
+        assert!(csv.contains("1000,rpm,1234,rpm\n"));
+        assert!(csv.contains("1100,tps,42.5,%\n"));
+
+        let _ = std::fs::remove_file(path);
+    }
+
+    #[tokio::test]
+    async fn test_latest_session_none_when_empty() {
+        let path = temp_db_path("logger_empty");
+        let store = SqliteStore::new(&path).await.expect("db open");
+
+        let session = store.latest_session().await.expect("latest_session ok");
+        assert!(session.is_none());
+
+        let _ = std::fs::remove_file(path);
+    }
+}

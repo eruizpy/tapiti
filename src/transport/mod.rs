@@ -111,3 +111,59 @@ impl TcpTransport {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    use tokio::net::TcpListener;
+
+    #[tokio::test]
+    async fn test_read_response_reads_until_prompt() {
+        let listener = TcpListener::bind("127.0.0.1:0").await.expect("bind");
+        let addr = listener.local_addr().expect("local_addr");
+
+        let server = tokio::spawn(async move {
+            let (mut socket, _) = listener.accept().await.expect("accept");
+            socket
+                .write_all(b"41 0C 1A F8\r\n>\r\n")
+                .await
+                .expect("write response");
+        });
+
+        let stream = TcpStream::connect(addr).await.expect("connect");
+        let mut t = TcpTransport {
+            stream,
+            addr: addr.to_string(),
+        };
+        let resp = t.read_response().await.expect("read_response");
+        assert!(resp.contains("41 0C 1A F8"));
+        assert!(resp.contains('>'));
+        server.await.expect("server task");
+    }
+
+    #[tokio::test]
+    async fn test_send_appends_carriage_return() {
+        let listener = TcpListener::bind("127.0.0.1:0").await.expect("bind");
+        let addr = listener.local_addr().expect("local_addr");
+
+        let server = tokio::spawn(async move {
+            let (mut socket, _) = listener.accept().await.expect("accept");
+            let mut buf = [0u8; 64];
+            let n = socket.read(&mut buf).await.expect("read cmd");
+            let received = String::from_utf8_lossy(&buf[..n]).to_string();
+            socket.write_all(b"OK\r\n>\r\n").await.expect("write ack");
+            received
+        });
+
+        let stream = TcpStream::connect(addr).await.expect("connect");
+        let mut t = TcpTransport {
+            stream,
+            addr: addr.to_string(),
+        };
+        let resp = t.send("ATI").await.expect("send");
+        assert!(resp.contains("OK"));
+        let received = server.await.expect("server task");
+        assert_eq!(received, "ATI\r");
+    }
+}

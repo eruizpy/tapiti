@@ -13,6 +13,16 @@ use tracing::{debug, error, info, warn};
 /// Cuántos STOPPED consecutivos disparan una reconexión completa del ELM327.
 const STOPPED_RECONNECT_THRESHOLD: u32 = 3;
 
+fn should_poll(tick: u64, priority: Priority) -> bool {
+    let divisor = match priority {
+        Priority::Critical => 1,
+        Priority::High => 3,
+        Priority::Normal => 5,
+        Priority::Low => 10,
+    };
+    tick.is_multiple_of(divisor)
+}
+
 pub struct PidScheduler {
     transport: Arc<Mutex<TcpTransport>>,
     tx: broadcast::Sender<Reading>,
@@ -50,13 +60,7 @@ impl PidScheduler {
             timer.tick().await;
 
             for pid in &pids {
-                let divisor = match pid.priority {
-                    Priority::Critical => 1,
-                    Priority::High => 3,
-                    Priority::Normal => 5,
-                    Priority::Low => 10,
-                };
-                if !tick.is_multiple_of(divisor) {
+                if !should_poll(tick, pid.priority) {
                     continue;
                 }
 
@@ -129,5 +133,42 @@ impl PidScheduler {
             }
             Err(e) => error!("Reconexión fallida: {}", e),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_should_poll_critical_always_true() {
+        for tick in [0_u64, 1, 2, 3, 10, 99] {
+            assert!(should_poll(tick, Priority::Critical));
+        }
+    }
+
+    #[test]
+    fn test_should_poll_high_every_three_ticks() {
+        assert!(should_poll(0, Priority::High));
+        assert!(!should_poll(1, Priority::High));
+        assert!(!should_poll(2, Priority::High));
+        assert!(should_poll(3, Priority::High));
+        assert!(should_poll(6, Priority::High));
+    }
+
+    #[test]
+    fn test_should_poll_normal_every_five_ticks() {
+        assert!(should_poll(0, Priority::Normal));
+        assert!(!should_poll(4, Priority::Normal));
+        assert!(should_poll(5, Priority::Normal));
+        assert!(should_poll(10, Priority::Normal));
+    }
+
+    #[test]
+    fn test_should_poll_low_every_ten_ticks() {
+        assert!(should_poll(0, Priority::Low));
+        assert!(!should_poll(9, Priority::Low));
+        assert!(should_poll(10, Priority::Low));
+        assert!(should_poll(20, Priority::Low));
     }
 }

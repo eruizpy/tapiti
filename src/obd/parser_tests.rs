@@ -2,7 +2,7 @@
 #[cfg(test)]
 mod tests {
     use crate::obd::parser::{mode01, mode21, parse_response};
-    use crate::obd::{ObdError, ObdResult};
+    use crate::obd::ObdError;
 
     // ── parse_response ──────────────────────────────────────────────────────
 
