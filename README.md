@@ -95,6 +95,20 @@ Notas:
 - `make build` detecta el NDK usando `ANDROID_NDK_HOME`/`NDK_HOME`, por lo que funciona tanto en host como en contenedor.
 - `docker-compose.yml` fija `platform: linux/amd64` para compatibilidad del toolchain NDK dentro de Docker Desktop.
 
+## Estado de compilacion
+
+Verificado el 12 de abril de 2026 con:
+
+```bash
+docker compose run --rm tapiti-dev bash -lc 'make clean && make check && make build'
+```
+
+Resultado:
+- `make check` OK (`cargo fmt`, `cargo clippy -- -D warnings`, `cargo test`, `cargo check`).
+- `make build` OK para `aarch64-linux-android`.
+- Binario generado en `target/aarch64-linux-android/release/tapiti`.
+- Advertencia no bloqueante en tests: import no usado (`src/obd/parser_tests.rs`).
+
 ## Hardware
 
 Probado con:
