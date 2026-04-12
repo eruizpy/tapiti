@@ -114,7 +114,6 @@ Resultado:
 Probado con:
 - Subaru Impreza WRX 2007 (EJ205, USDM)
 - Adaptador Viecar V2.1 Bluetooth SPP (ELM327 compatible)
-- PIN de pareado: `1234`
 
 ### Verificacion de protocolo
 
