@@ -56,7 +56,7 @@ impl PidScheduler {
                     Priority::Normal => 5,
                     Priority::Low => 10,
                 };
-                if tick % divisor != 0 {
+                if !tick.is_multiple_of(divisor) {
                     continue;
                 }
 

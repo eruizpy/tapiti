@@ -69,6 +69,32 @@ La primera vez en el directorio `android/` necesitas generar el Gradle wrapper:
 cd android && gradle wrapper --gradle-version 8.4
 ```
 
+## Desarrollo en Docker
+
+Si prefieres trabajar aislado con todas las dependencias (Rust + Android SDK/NDK + Java), usa:
+
+```bash
+# Construir imagen de desarrollo
+docker compose build tapiti-dev
+
+# Abrir shell dentro del contenedor
+docker compose run --rm tapiti-dev
+```
+
+Dentro del contenedor puedes ejecutar los mismos comandos:
+
+```bash
+make check
+make build
+make android-debug
+```
+
+Notas:
+- El repo se monta en `/workspace`.
+- Caches de Cargo y Gradle quedan persistidas vía volúmenes de Docker.
+- `make build` detecta el NDK usando `ANDROID_NDK_HOME`/`NDK_HOME`, por lo que funciona tanto en host como en contenedor.
+- `docker-compose.yml` fija `platform: linux/amd64` para compatibilidad del toolchain NDK dentro de Docker Desktop.
+
 ## Hardware
 
 Probado con:

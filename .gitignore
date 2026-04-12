@@ -24,3 +24,7 @@ Thumbs.db
 
 # Documentos de sesión — no subir al repo
 init_doc/
+
+# Archivos de asistentes IA
+AGENTS.md
+agents.md

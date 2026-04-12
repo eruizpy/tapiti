@@ -1,6 +1,6 @@
 TARGET   := aarch64-linux-android
-NDK_HOME ?= $(shell ls -d ~/Library/Android/sdk/ndk/* 2>/dev/null | tail -1)
-TOOLCHAIN := $(NDK_HOME)/toolchains/llvm/prebuilt/darwin-x86_64
+NDK_HOME ?= $(if $(ANDROID_NDK_HOME),$(ANDROID_NDK_HOME),$(shell ls -d ~/Library/Android/sdk/ndk/* ~/Android/Sdk/ndk/* /opt/android-sdk/ndk/* /opt/android-sdk/ndk-bundle 2>/dev/null | tail -1))
+TOOLCHAIN ?= $(firstword $(wildcard $(NDK_HOME)/toolchains/llvm/prebuilt/*))
 CC       := $(TOOLCHAIN)/bin/aarch64-linux-android21-clang
 AR       := $(TOOLCHAIN)/bin/llvm-ar
 
@@ -18,7 +18,11 @@ check:
 	cargo check
 
 build:
-	CC=$(CC) AR=$(AR) cargo build --release --target $(TARGET)
+	@if [ -z "$(NDK_HOME)" ] || [ ! -x "$(CC)" ]; then \
+		echo "Android NDK not found. Set ANDROID_NDK_HOME or NDK_HOME."; \
+		exit 1; \
+	fi
+	CC=$(CC) AR=$(AR) CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=$(CC) cargo build --release --target $(TARGET)
 
 copy: build
 	mkdir -p $(APK_ASSETS)

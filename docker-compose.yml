@@ -1,0 +1,19 @@
+services:
+  tapiti-dev:
+    platform: linux/amd64
+    build:
+      context: .
+      dockerfile: Dockerfile
+    working_dir: /workspace
+    volumes:
+      - .:/workspace
+      - cargo-registry:/usr/local/cargo/registry
+      - cargo-git:/usr/local/cargo/git
+      - gradle-cache:/root/.gradle
+    tty: true
+    stdin_open: true
+
+volumes:
+  cargo-registry:
+  cargo-git:
+  gradle-cache:
